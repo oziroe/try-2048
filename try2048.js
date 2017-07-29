@@ -28,16 +28,77 @@ function MergeNumber(n, x1, y1, x2, y2, mergeX, mergeY)
 }
 
 
-// Part 2, entry point.
+// Part 2, move logic.
+function GetEmptyBoard()
+{
+    return {
+        _data: [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+        get: function(x, y) { return this._data[x][y]; },
+        set: function(x, y, number) { this._data[x][y] = number; }
+    }
+}
+
+
+function AddRandomNumber(board)
+{
+    while (true)
+    {
+        var x = rand(4), y = rand(4);
+        if (board.get(x, y) != 0)
+            continue;
+        else
+        {
+            board.set(x, y, rand(10) < 9 ? 2 : 4);
+            break;
+        }
+    }
+}
+
+function GetInitializedBoard()
+{
+    var board = GetEmptyBoard();
+    AddRandomNumber(board);
+    AddRandomNumber(board);
+    return board;
+}
+
+
+// Part 3, entry point.
 function Main()
 {
-    MergeNumber(256, 1, 3, 2, 3, 3, 3);
+    var board = GetInitializedBoard();
+    console.log(logB(board, true));
 }
 window.onload = Main;
 
 
-// Part 3, utils.
+// Part 4, utils.
 function logP(x, y)
 {
     return "(" + x + ", " + y + ")";
+}
+
+function rand(upBnd)
+{
+    return Math.floor(Math.random() * upBnd);
+}
+
+function logB(board, newline=false)
+{
+    // TODO: ugly, rewrite.
+    var log = "";
+    log += newline ? "" : "[";
+    for (var y = 0; y < 4; y++)
+    {
+        for (var x = 0; x < 4; x++)
+        {
+            log += board.get(x, y);
+            if (x != 3)
+                log += newline ? " " : ", ";
+        }
+        if (y != 3)
+            log += newline ? "\n" : "], [";
+    }
+    log += newline ? "" : "]";
+    return log;
 }
