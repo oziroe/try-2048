@@ -74,17 +74,13 @@ function SlideBoard(board, direction, move, merge)
                 vector.push(board.get(x, y));
             function VectorMove(num, from, to)
             {
-                console.log("moving from " + from + " to " + to);
+                // console.log("moving from " + from + " to " + to);
                 move(num, x, from, x, to);
-                vector[from] = 0;
-                vector[to] = num;
             }
             function VectorMerge(num, from, to)
             {
-                console.log("merging from " + from + " to " + to);
+                // console.log("merging from " + from + " to " + to);
                 merge(num, x, from, x, to);
-                vector[from] = 0;
-                vector[to] += num;
             }
             var m = SlideVector(vector, direction == 0 ? 0 : 1, VectorMove,
                 VectorMerge);
@@ -97,20 +93,16 @@ function SlideBoard(board, direction, move, merge)
     {
         for (var y = 0; y < 4; y++)
         {
-            console.log("working on col #" + y);
+            // console.log("working on col #" + y);
             function VectorMove(num, from, to)
             {
-                console.log("moving from " + from + " to " + to);
+                // console.log("moving from " + from + " to " + to);
                 move(num, from, y, to, y);
-                vector[from] = 0;
-                vector[to] = num;
             }
             function VectorMerge(num, from, to)
             {
-                console.log("merging from " + from + " to " + to);
+                // console.log("merging from " + from + " to " + to);
                 merge(num, from, y, to, y);
-                vector[from] = 0;
-                vector[to] += num;
             }
             var vector = new Array();
             for (var x = 0; x < 4; x++)
@@ -139,7 +131,7 @@ function SlideVector(numbers, destination, move, merge)
     var moved = false;
     for (var i = start; i >= 0 && i <= 3; i = destination ? i - 1 : i + 1)
     {
-        console.log("  working on number#" + i + "(" + numbers[i] + ")");
+        // console.log("  working on number#" + i + "(" + numbers[i] + ")");
         if (numbers[i] == 0)
             continue;
         var rangeStart = destination ? i + 1 : i - 1;
@@ -149,23 +141,27 @@ function SlideVector(numbers, destination, move, merge)
             // The moved position should not be modified again.
             if (!modifiable[j])
             {
-                console.log("Postion #" + j + " has been moved.");
+                // console.log("Postion #" + j + " has been moved.");
 
                 var arrived = destination ? j - 1 : j + 1;
                 if (i != arrived)
                 {
                     move(numbers[i], i, arrived);
+                    numbers[arrived] = numbers[i];
+                    numbers[i] = 0;
                     moved = true;
                 }
                 break;
             }
             if (numbers[j] != 0)
             {
-                console.log("Postion #" + j + " not zero.");
+                // console.log("Postion #" + j + " not zero.");
                 if (numbers[j] == numbers[i])
                 {
                     merge(numbers[i], i, j);
-                    console.log(numbers);
+                    // console.log(numbers);
+                    numbers[j] += numbers[i];
+                    numbers[i] = 0;
                     modifiable[j] = false;
                     moved = true;
                 }
@@ -175,6 +171,8 @@ function SlideVector(numbers, destination, move, merge)
                     if (i != arrived)
                     {
                         move(numbers[i], i, arrived);
+                        numbers[arrived] = numbers[i];
+                        numbers[i] = 0;
                         moved = true;
                     }
                 }
@@ -184,7 +182,9 @@ function SlideVector(numbers, destination, move, merge)
             if (j == (destination ? 3 : 0))
             {
                 move(numbers[i], i, j);
-                console.log(numbers);
+                // console.log(numbers);
+                numbers[j] = numbers[i];
+                numbers[i] = 0;
                 moved = true;
                 break;
             }
