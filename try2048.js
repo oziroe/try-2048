@@ -28,15 +28,13 @@ function MergeNumber(n, x, y, mergeX, mergeY)
 
 
 // Part 2, move logic.
-function GetEmptyBoard()
+function EmptyBoard()
 {
-    return {
-        _data: [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
-        get: function(x, y) { return this._data[x][y]; },
-        set: function(x, y, number) { this._data[x][y] = number; }
-    }
+    this._data = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
+    this.get = function(x, y) { return this._data[x][y]; };
+    this.set = function(x, y, number) { this._data[x][y] = number; };
+    this.context = new ActionContext();
 }
-
 
 function AddRandomNumber(board)
 {
@@ -47,7 +45,9 @@ function AddRandomNumber(board)
             continue;
         else
         {
-            board.set(x, y, rand(10) < 9 ? 2 : 4);
+            var n = rand(10) < 9 ? 2 : 4;
+            board.set(x, y, n);
+            board.context.EmergeHandler(n, x, y);
             break;
         }
     }
@@ -55,10 +55,59 @@ function AddRandomNumber(board)
 
 function GetInitializedBoard()
 {
-    var board = GetEmptyBoard();
+    var board = new EmptyBoard();
     AddRandomNumber(board);
     AddRandomNumber(board);
     return board;
+}
+
+function ActionContext()
+{
+    var self = this;
+    this._data = {move: [], substitute: []};
+    this.MoveHandler = function(number, fromX, fromY, toX, toY)
+    {
+        self._data.move.push({fromX: fromX, fromY: fromY, toX: toX,
+            toY: toY, number: number});
+    };
+    this.MergeHandler = function(number, fromX, fromY, toX, toY)
+    {
+        // console.log(self);
+        self._data.move.push({fromX: fromX, fromY: fromY, toX: toX,
+            toY: toY, number: number});
+        self._data.substitute.push({x: toX, y: toY, number: number * 2});
+    };
+    this.EmergeHandler = function(number, x, y)
+    {
+        self._data.substitute.push({x: x, y: y, number: number});
+    }
+    this.Trigger = function(delay)
+    {
+        function SubstituteProccess()
+        {
+            while (self._data.substitute.length > 0)
+            {
+                var sub = self._data.substitute.pop();
+                SubstituteNumber(sub.number, sub.x, sub.y);
+            }
+        }
+
+        if (self._data.move.length > 0)
+        {
+            while (self._data.move.length > 0)
+            {
+                var move = self._data.move.pop();
+                MoveNumber(move.number, move.fromX, move.fromY, move.toX,
+                    move.toY);
+            }
+            if (self._data.substitute.length > 0)
+            {
+                setTimeout(SubstituteProccess, delay * 1000);
+            }
+        }
+        else
+            SubstituteProccess();
+    };
 }
 
 function SlideBoard(board, direction, move, merge)
@@ -197,35 +246,22 @@ function SlideVector(numbers, destination, move, merge)
 // Part 3, entry point.
 function Main()
 {
-    var board = GetEmptyBoard();
-    board.set(0, 0, 4);
-    board.set(1, 0, 2);
-    board.set(2, 0, 4);
-    board.set(3, 0, 2);
-    board.set(0, 1, 2);
-    board.set(1, 1, 4);
-    board.set(2, 1, 2);
-    board.set(3, 1, 4);
-    board.set(0, 2, 4);
-    board.set(1, 2, 2);
-    board.set(2, 2, 4);
-    board.set(3, 2, 8);
-    board.set(1, 3, 2);
-    board.set(2, 3, 4);
-    board.set(3, 3, 8);
-    board.set(0, 3, 0);
-
-
+    var board = GetInitializedBoard();
     console.log(logB(board, true));
+    context = board.context;
+    context.Trigger(0.5);
     function KeyPressHandler(event)
     {
         var map = {w: 0, d: 1, s: 2, a: 3};
         if (event.key in map)
         {
-            var alive = SlideBoard(board, map[event.key], MoveNumber,
-                MergeNumber);
+            var alive = SlideBoard(board, map[event.key], context.MoveHandler,
+                context.MergeHandler);
             if (alive)
+            {
                 console.log(logB(board, true));
+                context.Trigger(0.5);
+            }
             else
             {
                 console.log("Game over.");
