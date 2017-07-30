@@ -110,7 +110,7 @@ function ActionContext()
     };
 }
 
-function SlideBoard(board, direction, move, merge)
+function SlideBoard(board, direction)
 {
     // direction: 0 up, 1 right, 2 down, 3 left
     var moved = false;
@@ -124,12 +124,12 @@ function SlideBoard(board, direction, move, merge)
             function VectorMove(num, from, to)
             {
                 // console.log("moving from " + from + " to " + to);
-                move(num, x, from, x, to);
+                board.context.MoveHandler(num, x, from, x, to);
             }
             function VectorMerge(num, from, to)
             {
                 // console.log("merging from " + from + " to " + to);
-                merge(num, x, from, x, to);
+                board.context.MergeHandler(num, x, from, x, to);
             }
             var m = SlideVector(vector, direction == 0 ? 0 : 1, VectorMove,
                 VectorMerge);
@@ -146,12 +146,12 @@ function SlideBoard(board, direction, move, merge)
             function VectorMove(num, from, to)
             {
                 // console.log("moving from " + from + " to " + to);
-                move(num, from, y, to, y);
+                board.context.MoveHandler(num, from, y, to, y);
             }
             function VectorMerge(num, from, to)
             {
                 // console.log("merging from " + from + " to " + to);
-                merge(num, from, y, to, y);
+                board.context.MergeHandler(num, from, y, to, y);
             }
             var vector = new Array();
             for (var x = 0; x < 4; x++)
@@ -248,15 +248,13 @@ function Main()
 {
     var board = GetInitializedBoard();
     console.log(logB(board, true));
-    context = board.context;
-    context.Trigger(0.5);
+    board.context.Trigger(0.5);
     function KeyPressHandler(event)
     {
         var map = {w: 0, d: 1, s: 2, a: 3};
         if (event.key in map)
         {
-            var alive = SlideBoard(board, map[event.key], context.MoveHandler,
-                context.MergeHandler);
+            var alive = SlideBoard(board, map[event.key]);
             if (alive)
             {
                 console.log(logB(board, true));
