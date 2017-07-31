@@ -127,7 +127,7 @@ function Turn()
         .Call(self._actions.move,
             function(move, finished) {
                 Move(move.x1, move.y1, move.x2, move.y2, finished);
-            }, function() {
+            }, function() {  // I want pointer!
                 return --self._remain.move;
             }, afterMove)
         .Call(self._actions.substitute,
@@ -296,7 +296,7 @@ function Grid(size)
         {
             for (var y = 0; y < size; y++)
             {
-                if (self._grid[x][y] !== 0)
+                if (self._grid[x][y] === 0)
                     return false;
                 if ((x > 0 && self._grid[x - 1][y] === self._grid[x][y]) ||
                     (x < size - 1 && self._grid[x + 1][y]
@@ -330,18 +330,28 @@ function DisplayAdvent(x, y, number, finished)
     var tile = document.createElement("div");
     tile.innerText = number;
     tile.classList.add("board-tile");
-    tile.style.width = tile.style.height = tile.style.lineHeight = "100px";
+    tile.style.transition = "all 0.05s";
+    tile.style.width = tile.style.height = 0;
+    tile.style.lineHeight = "100px";
+    tile.style.fontSize = 0;
+    tile.style.margin = "50px";
     tile.style.top  = (y * 110 + 10) + "px";
     tile.style.left = (x * 110 + 10) + "px";
-    tile.style.transition = "top 0.2s, left 0.2s";
     document.getElementById("board-tiles-container").appendChild(tile);
     searchTable[StringP(x, y)] = tile;
-    finished();
+
+    setTimeout(function() {
+        tile.style.width = tile.style.height = "100px";
+        tile.style.fontSize = "20px";
+        tile.style.margin = "";
+    }, 0);
+    OnceListener(tile, finished);
 }
 
 function DisplayMove(x, y, newX, newY, finished)
 {
     var tile = searchTable[StringP(x, y)];
+    tile.style.transition = "all 0.2s";
     tile.style.top  = (newY * 110 + 10) + "px";
     tile.style.left = (newX * 110 + 10) + "px";
     // There's no need to worry about overriding.
@@ -355,12 +365,7 @@ function DisplayMove(x, y, newX, newY, finished)
 
     delete searchTable[StringP(x, y)];
     registryTable[StringP(newX, newY)] = tile;
-    tile.addEventListener("transitionend", function()
-    {
-        // console.log("On transition end.");
-        tile.removeEventListener("transitionend", arguments.callee);
-        finished();
-    });
+    OnceListener(tile, finished);
 }
 
 function DisplayAfterMove()
@@ -388,7 +393,16 @@ function DisplaySubstitute(x, y, num, finished)
 {
     var tile = searchTable[StringP(x, y)];
     tile.innerText = num;
-    finished();
+    tile.style.transition = "all 0.1s";
+    tile.style.width = tile.style.height = tile.style.lineHeight = "110px";
+    tile.style.fontSize = "22px";
+    tile.style.margin = "-5px";
+    OnceListener(tile, function() {
+        tile.style.width = tile.style.height = tile.style.lineHeight = "100px";
+        tile.style.fontSize = "20px";
+        tile.style.margin = "";
+        OnceListener(tile, finished);
+    });
 }
 
 
@@ -457,4 +471,14 @@ function StringG(grid)
         str += "\n";
     }
     return str;
+}
+
+function OnceListener(target, callback)
+{
+    target.addEventListener("transitionend", function()
+    {
+        // console.log("On transition end.");
+        target.removeEventListener("transitionend", arguments.callee);
+        callback();
+    });
 }
