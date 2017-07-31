@@ -5,6 +5,10 @@
  * Restarted by oziroe on July 31, 2017.
  */
 
+body {
+    font-family: sans-serif;
+}
+
 #board-tiles-container {
     position: relative;
     border: 1px solid;
@@ -14,4 +18,5 @@
     position: absolute;
     text-align: center;
     border: 1px solid;
+    font-size: 20px;
 }
