@@ -1,0 +1,17 @@
+/*
+ * style.css
+ * Common styles for board and other.
+ *
+ * Restarted by oziroe on July 31, 2017.
+ */
+
+#board-tiles-container {
+    position: relative;
+    border: 1px solid;
+}
+
+.board-tile {
+    position: absolute;
+    text-align: center;
+    border: 1px solid;
+}
