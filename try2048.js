@@ -249,7 +249,8 @@ function Main()
     var board = GetInitializedBoard();
     console.log(logB(board, true));
     board.context.Trigger(0.5);
-    function KeyPressHandler(event)
+
+    window.onkeypress = function(event)
     {
         var map = {w: 0, d: 1, s: 2, a: 3};
         if (event.key in map)
@@ -258,7 +259,7 @@ function Main()
             if (alive)
             {
                 console.log(logB(board, true));
-                context.Trigger(0.5);
+                board.context.Trigger(0.5);
             }
             else
             {
@@ -267,7 +268,6 @@ function Main()
             }
         }
     }
-    window.onkeypress = KeyPressHandler;
 }
 window.onload = Main;
 
