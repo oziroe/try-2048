@@ -33,11 +33,6 @@ function Substitute(x, y, number, finished)
     DisplaySubstitute(x, y, number, finished);
 }
 
-function Score(score)
-{
-    DisplayScore(score);
-}
-
 
 // Basic Logic Part.
 // There are some promises when calling basic interfaces, such as the order of
@@ -83,7 +78,8 @@ function Turn()
 
     this.Trigger = function(afterMove, afterSubstitute, afterAdvent, afterAll)
     {
-        Score(self._score);
+        DisplayScore(self._score);
+        DisplayShowStart();
 
         function CommonPatternHere(callQueue, remain, beforeNext, next)
         {
@@ -142,6 +138,7 @@ function Turn()
                 if (afterAll !== null)
                     afterAll();
                 console.log("All done for this turn.");
+                DisplayShowEnd();
             })();
 
         Object.keys(self._remain).forEach(function(key) {
@@ -155,7 +152,7 @@ function Turn()
 // A "slide" is the basic action player can do. The chess board object will also
 // be defined in this part. Actually, a slide will be deconstructed into actions
 // that all finish in one ture.
-function Grid(size)
+function Grid(size, turn)
 {
     this._grid = new Array(size);
     for (var i = 0; i < this._grid.length; i++)
@@ -166,7 +163,7 @@ function Grid(size)
     }
     var self = this;
 
-    this.AddRandom = function(turn)
+    this.AddRandom = function()
     {
         var full = true;
         for (var x = 0; x < size; x++)
@@ -198,7 +195,7 @@ function Grid(size)
     };
 
     // `direction`: 0 => up, 1 => right, 2 => down, 3 => left.
-    this.Slide = function(direction, turn)
+    this.Slide = function(direction)
     {
         // Slide `numbers` toward numbers[0].
         function SlideVector(numbers, move, merge)
@@ -345,7 +342,7 @@ function DisplayInitialize()
 // These three global var must be keeping, so I can track tiles during moving
 // action. The limitation of Interface Part brings this problem. Hope it would
 // be solved one day.
-var searchTable = new Object, registryTable = new Object, deadQueue = new Array;
+var searchTable = {}, registryTable = {}, deadQueue = [];
 
 function DisplayAdvent(x, y, number, finished)
 {
@@ -411,7 +408,7 @@ function DisplayAfterMove()
         }
         searchTable[pos] = registryTable[pos];
     });
-    registryTable = new Object;
+    registryTable = {};
     // console.log(searchTable);
 }
 
@@ -423,6 +420,7 @@ function DisplaySubstitute(x, y, num, finished)
     tile.style.width = tile.style.height = tile.style.lineHeight = "110px";
     tile.style.fontSize = "22px";
     tile.style.margin = "-5px";
+    // Don't know why but seems IE11 always time out on this trigger.
     OnceListener(tile, function() {
         tile.style.width = tile.style.height = tile.style.lineHeight = "100px";
         tile.style.fontSize = "20px";
@@ -446,6 +444,16 @@ function DisplayScore(score)
     document.getElementById("score-message").innerText = score;
 }
 
+function DisplayShowStart()
+{
+    document.getElementById("board-tiles-container").style.borderColor = "grey";
+}
+
+function DisplayShowEnd()
+{
+    document.getElementById("board-tiles-container").style.borderColor = "";
+}
+
 
 // Main Part.
 // The main game loop and entry point.
@@ -453,9 +461,9 @@ window.onload = function()
 {
     DisplayInitialize();
     var turn = new Turn();
-    var grid = new Grid(4);
-    grid.AddRandom(turn);
-    grid.AddRandom(turn);
+    var grid = new Grid(4, turn);
+    grid.AddRandom();
+    grid.AddRandom();
     turn.Trigger(null, null, null, null);
     // console.log(grid);
 
@@ -467,7 +475,7 @@ window.onload = function()
         var map = {w: 0, d: 1, s: 2, a: 3};
         if (e.key in map)
         {
-            if (grid.Slide(map[e.key], turn))
+            if (grid.Slide(map[e.key]))
             {
                 animating = true;
                 turn.Trigger(DisplayAfterMove, null, function() {
@@ -525,6 +533,22 @@ function StringG(grid)
 // first. :)
 function OnceListener(target, callback)
 {
-    target.addEventListener("transitionend", callback, {once: true});
+    var triggered = false;
+    function CallbackWrapper()
+    {
+        triggered = true;
+        callback();
+    }
+    target.addEventListener("transitionend", CallbackWrapper, {once: true});
     // console.log(target.ontransitionend);
+
+    // Trigger the callback explicitly after timeout.
+    setTimeout(function() {
+        if (!triggered)
+        {
+            console.log("Time out! Force executing callback.");
+            console.log(target);
+            callback();
+        }
+    }, 500);
 }
