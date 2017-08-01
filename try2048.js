@@ -521,13 +521,10 @@ function StringG(grid)
     return str;
 }
 
+// This util seems a little abnormal, right, I do not know `once` option at
+// first. :)
 function OnceListener(target, callback)
 {
-    target.addEventListener("transitionend", function()
-    {
-        // console.log("On transition end.");
-        target.removeEventListener("transitionend", arguments.callee);
-        callback();
-    });
+    target.addEventListener("transitionend", callback, {once: true});
     // console.log(target.ontransitionend);
 }
