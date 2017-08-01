@@ -118,24 +118,15 @@ function Turn()
         // arguments, supporting within that function is needed.
         function CurryList()
         {
-            this._list = [];
+            this.list = [];
             var self = this;
             this.Call = function(callQueue, decrease, beforeNext)
             {
-                self._list.push({callQueue: callQueue,
-                    decrease: decrease, beforeNext: beforeNext});
-                return self;
-            };
-            this.List = function()
-            {
-                return self._list.map(function(argument)
-                {
-                    return function(after)
-                    {
-                        return CommonPatternHere(argument.callQueue,
-                            argument.decrease, argument.beforeNext, after);
-                    };
+                self.list.push(function (after) {
+                    return CommonPatternHere(callQueue, decrease, beforeNext,
+                        after);
                 });
+                return self;
             };
         }
         new CurryList()
@@ -151,7 +142,7 @@ function Turn()
             function() {
                 return --self._remain.advent;
             }, afterAdvent)
-        .List().reduceRight(
+        .list.reduceRight(
             function(after, previous) { return previous(after); },
             function() {
                 if (afterAll !== null)
