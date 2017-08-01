@@ -64,7 +64,7 @@ function Turn()
         self._actions.substitute.push({x: toX, y: toY, number: number * 2});
     };
 
-    this.Trigger = function(afterMove=null, afterAdvent=null)
+    this.Trigger = function(afterMove, afterAdvent)
     {
         function CommonPatternHere(dataSet, call, decrease, beforeNext,
             after)
@@ -103,8 +103,7 @@ function Turn()
         {
             this._list = [];
             var self = this;
-            this.Call = function(dataSet, call, decrease,
-                beforeNext=null)
+            this.Call = function(dataSet, call, decrease, beforeNext)
             {
                 self._list.push({dataSet: dataSet, call: call,
                     decrease: decrease, beforeNext: beforeNext});
@@ -135,7 +134,7 @@ function Turn()
                 Substitute(sub.x, sub.y, sub.number, finished);
             }, function() {
                 return --self._remain.substitute;
-            })
+            }, null)
         .Call(self._actions.advent,
             function(advent, finished) {
                 Advent(advent.x, advent.y, advent.number, finished);
@@ -157,7 +156,11 @@ function Grid(size)
 {
     this._grid = new Array(size);
     for (var i = 0; i < this._grid.length; i++)
-        this._grid[i] = new Array(size).fill(0);  // 0 means no number here.
+    {
+        this._grid[i] = new Array(size);
+        for (var j = 0; j < this._grid[i].length; j++)
+            this._grid[i][j] = 0;  // 0 means no number here.
+    }
     var self = this;
 
     this.AddRandom = function(turn)
@@ -196,7 +199,9 @@ function Grid(size)
         // Slide `numbers` toward numbers[0].
         function SlideVector(numbers, move, merge)
         {
-            var merged = new Array(size).fill(false);
+            var merged = new Array(size);
+            for (var i = 0; i < merged.length; i++)
+                merged[i] = false;
             var changed = false;
             for (var i = 1; i < size; i++)  // First number stays.
             {
