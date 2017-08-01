@@ -460,8 +460,7 @@ window.onload = function()
     // console.log(grid);
 
     var animating = false, over = false;
-    window.addEventListener("keypress", function(e)
-    {
+    window.addEventListener("keypress", function(e) {
         // Disable key press during animation or game is already over.
         if (animating || over)
             return;
@@ -485,6 +484,12 @@ window.onload = function()
             }
             // console.log(searchTable);
         }
+    });
+
+    document.getElementById("restart-button")
+            .addEventListener("click", function() {
+        // Go to hell
+        window.location.reload();
     });
 }
 

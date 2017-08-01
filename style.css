@@ -34,14 +34,33 @@
 #score-container {
     position: absolute;
     right: 0;
-    top: 30px;
+    top: 0;
     border: 1px solid;
     text-align: center;
     width: 100px;
-    height: 50px;
-    line-height: 1.5em;
+    height: 45px;
+    line-height: 1.4em;
 }
 
 #score-message {
     font-size: 20px;
+}
+
+#restart-container {
+    position: absolute;
+    right: 0;
+    top: 57px;
+    text-align: center;
+    width: 100px;
+    border: 1px solid;
+}
+
+#restart-container button {
+    width: 100%;
+    padding: 0;
+    height: 30px;
+    border: 0;
+    padding: 0;
+    background-color: white;
+    font-size: 15px;
 }
