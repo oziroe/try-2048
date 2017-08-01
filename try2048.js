@@ -9,6 +9,7 @@
 // There may be many ways to present numbers on the screen, and I prefer the
 // dummiest one.
 // Change the implementation of this part if I change my mind in the future.
+//
 // Notice: All of these interfaces should return immediately. The action may
 // last for a long time after calling. However, the hook function argument
 // `finished` shall be called after the actual process.
@@ -44,30 +45,39 @@ function Score(score)
 // a higher level of abstraction for this purpose.
 // Additionally, basic operation "merge" is a combination of move and
 // substitute, which will also be defined in the part.
+//
+// NOTICE: After score counting is introduced into Turn, a Turn object must be
+// reused for an entire game to keep the score.
 function Turn()
 {
     this._actions = {advent: [], move: [], substitute: []};
-    this._remain  = {advent: 0, move: 0, substitute: 0};
+    this._remain  = {advent: 0,  move: 0,  substitute: 0};
     this._score = 0;
     var self = this;
 
     this.Advent = function(x, y, number)
     {
         self._remain.advent++;
-        self._actions.advent.push({x: x, y: y, number: number});
+        self._actions.advent.push(function(finished) {
+            Advent(x, y, number, finished);
+        });
     };
 
     this.Move = function(x, y, newX, newY)
     {
         self._remain.move++;
-        self._actions.move.push({x1: x, y1: y, x2: newX, y2: newY});
+        self._actions.move.push(function(finished) {
+            Move(x, y, newX, newY, finished);
+        });
     };
 
     this.Merge = function(x, y, toX, toY, number)
     {
         self.Move(x, y, toX, toY);
         self._remain.substitute++;
-        self._actions.substitute.push({x: toX, y: toY, number: number * 2});
+        self._actions.substitute.push(function(finished) {
+            Substitute(toX, toY, number * 2, finished);
+        });
         self._score += number;
     };
 
@@ -75,21 +85,19 @@ function Turn()
     {
         Score(self._score);
 
-        function CommonPatternHere(dataSet, call, decrease, beforeNext,
-            after)
+        function CommonPatternHere(callQueue, decrease, beforeNext, after)
         {
             return function()
             {
-                if (dataSet.length === 0)
+                if (callQueue.length === 0)
                 {
                     after();
                     return;
                 }
-                while (dataSet.length > 0)
+
+                while (callQueue.length > 0)
                 {
-                    var data = dataSet.pop();
-                    call(data, function()
-                    {
+                    callQueue.pop()(function() {
                         // It is heard that in Javascript there's no data race.
                         // The following code need fix if I was wrong.
                         // `decrease` will change count value and return its new
@@ -112,9 +120,9 @@ function Turn()
         {
             this._list = [];
             var self = this;
-            this.Call = function(dataSet, call, decrease, beforeNext)
+            this.Call = function(callQueue, decrease, beforeNext)
             {
-                self._list.push({dataSet: dataSet, call: call,
+                self._list.push({callQueue: callQueue,
                     decrease: decrease, beforeNext: beforeNext});
                 return self;
             };
@@ -124,30 +132,23 @@ function Turn()
                 {
                     return function(after)
                     {
-                        return CommonPatternHere(argument.dataSet,
-                            argument.call, argument.decrease,
-                            argument.beforeNext, after);
+                        return CommonPatternHere(argument.callQueue,
+                            argument.decrease, argument.beforeNext, after);
                     };
                 });
             };
         }
         new CurryList()
         .Call(self._actions.move,
-            function(move, finished) {
-                Move(move.x1, move.y1, move.x2, move.y2, finished);
-            }, function() {  // I want pointer!
+            function() {  // I want pointer!
                 return --self._remain.move;
             }, afterMove)
         .Call(self._actions.substitute,
-            function(sub, finished) {
-                Substitute(sub.x, sub.y, sub.number, finished);
-            }, function() {
+            function() {
                 return --self._remain.substitute;
-            }, afterAdvent)
+            }, afterSubstitute)
         .Call(self._actions.advent,
-            function(advent, finished) {
-                Advent(advent.x, advent.y, advent.number, finished);
-            }, function() {
+            function() {
                 return --self._remain.advent;
             }, afterAdvent)
         .List().reduceRight(
@@ -371,7 +372,11 @@ function DisplayAdvent(x, y, number, finished)
         tile.style.fontSize = "20px";
         tile.style.margin = "";
     }, 0);
-    OnceListener(tile, finished);
+    OnceListener(tile, function() {
+        console.log("Advent finished.");
+        finished();
+    });
+    // console.log("Set advent transition listener.");
 }
 
 function DisplayMove(x, y, newX, newY, finished)
@@ -524,4 +529,5 @@ function OnceListener(target, callback)
         target.removeEventListener("transitionend", arguments.callee);
         callback();
     });
+    // console.log(target.ontransitionend);
 }
