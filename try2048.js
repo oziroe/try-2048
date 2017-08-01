@@ -85,13 +85,14 @@ function Turn()
     {
         Score(self._score);
 
-        function CommonPatternHere(callQueue, decrease, beforeNext, after)
+        function CommonPatternHere(callQueue, remain, beforeNext, next)
         {
             return function()
             {
                 if (callQueue.length === 0)
                 {
-                    after();
+                    beforeNext && beforeNext();
+                    next();
                     return;
                 }
 
@@ -102,11 +103,10 @@ function Turn()
                         // The following code need fix if I was wrong.
                         // `decrease` will change count value and return its new
                         // value. It must be wrapped to change the origin var.
-                        if (decrease() === 0)
+                        if (--remain === 0)
                         {
-                            if (beforeNext !== null)
-                                beforeNext();
-                            after();
+                            beforeNext && beforeNext();
+                            next();
                         }
                     });
                 }
@@ -131,17 +131,11 @@ function Turn()
         }
         new CurryList()
         .Call(self._actions.move,
-            function() {  // I want pointer!
-                return --self._remain.move;
-            }, afterMove)
+            self._remain.move, afterMove)
         .Call(self._actions.substitute,
-            function() {
-                return --self._remain.substitute;
-            }, afterSubstitute)
+            self._remain.substitute, afterSubstitute)
         .Call(self._actions.advent,
-            function() {
-                return --self._remain.advent;
-            }, afterAdvent)
+            self._remain.advent, afterAdvent)
         .list.reduceRight(
             function(after, previous) { return previous(after); },
             function() {
@@ -149,6 +143,10 @@ function Turn()
                     afterAll();
                 console.log("All done for this turn.");
             })();
+
+        Object.keys(self._remain).forEach(function(key) {
+            self._remain[key] = 0;
+        });
     };
 }
 
