@@ -5,17 +5,43 @@
  * Restarted by oziroe on July 31, 2017.
  */
 
-body {
+#page-container {
     font-family: sans-serif;
+    margin: 0 auto;
+    position: relative;
 }
 
 #board-tiles-container {
     position: relative;
     border: 1px solid;
+    transition: opacity 0.5s;
 }
 
 .board-tile {
     position: absolute;
     text-align: center;
     border: 1px solid;
+}
+
+#board-game-over-message {
+    position: absolute;
+    text-align: center;
+    font-size: 50px;
+    opacity: 0;
+    transition: all 0.5s;
+}
+
+#score-container {
+    position: absolute;
+    right: 0;
+    top: 30px;
+    border: 1px solid;
+    text-align: center;
+    width: 100px;
+    height: 50px;
+    line-height: 1.5em;
+}
+
+#score-message {
+    font-size: 20px;
 }

@@ -32,6 +32,11 @@ function Substitute(x, y, number, finished)
     DisplaySubstitute(x, y, number, finished);
 }
 
+function Score(score)
+{
+    DisplayScore(score);
+}
+
 
 // Basic Logic Part.
 // There are some promises when calling basic interfaces, such as the order of
@@ -43,6 +48,7 @@ function Turn()
 {
     this._actions = {advent: [], move: [], substitute: []};
     this._remain  = {advent: 0, move: 0, substitute: 0};
+    this._score = 0;
     var self = this;
 
     this.Advent = function(x, y, number)
@@ -62,10 +68,13 @@ function Turn()
         self.Move(x, y, toX, toY);
         self._remain.substitute++;
         self._actions.substitute.push({x: toX, y: toY, number: number * 2});
+        self._score += number;
     };
 
-    this.Trigger = function(afterMove, afterAdvent)
+    this.Trigger = function(afterMove, afterSubstitute, afterAdvent, afterAll)
     {
+        Score(self._score);
+
         function CommonPatternHere(dataSet, call, decrease, beforeNext,
             after)
         {
@@ -134,7 +143,7 @@ function Turn()
                 Substitute(sub.x, sub.y, sub.number, finished);
             }, function() {
                 return --self._remain.substitute;
-            }, null)
+            }, afterAdvent)
         .Call(self._actions.advent,
             function(advent, finished) {
                 Advent(advent.x, advent.y, advent.number, finished);
@@ -143,7 +152,11 @@ function Turn()
             }, afterAdvent)
         .List().reduceRight(
             function(after, previous) { return previous(after); },
-            function() { console.log("All done for this turn."); })();
+            function() {
+                if (afterAll !== null)
+                    afterAll();
+                console.log("All done for this turn.");
+            })();
     };
 }
 
@@ -326,8 +339,16 @@ function DisplayInitialize()
     container.id = "board-tiles-container";
     container.style.width = container.style.height = "450px";
     document.getElementById("board-container").appendChild(container);
+    document.getElementById("page-container").style.width = "452px";
+
+    var gameOverMessage = document.getElementById("board-game-over-message");
+    gameOverMessage.style.width = gameOverMessage.style.height =
+        gameOverMessage.style.lineHeight = "450px";
 }
 
+// These three global var must be keeping, so I can track tiles during moving
+// action. The limitation of Interface Part brings this problem. Hope it would
+// be solved one day.
 var searchTable = new Object, registryTable = new Object, deadQueue = new Array;
 
 function DisplayAdvent(x, y, number, finished)
@@ -356,7 +377,7 @@ function DisplayAdvent(x, y, number, finished)
 function DisplayMove(x, y, newX, newY, finished)
 {
     var tile = searchTable[StringP(x, y)];
-    tile.style.transition = "all 0.2s";
+    tile.style.transition = "all 0.15s";
     tile.style.top  = (newY * 110 + 10) + "px";
     tile.style.left = (newX * 110 + 10) + "px";
     // There's no need to worry about overriding.
@@ -398,7 +419,7 @@ function DisplaySubstitute(x, y, num, finished)
 {
     var tile = searchTable[StringP(x, y)];
     tile.innerText = num;
-    tile.style.transition = "all 0.1s";
+    tile.style.transition = "all 0.07s";
     tile.style.width = tile.style.height = tile.style.lineHeight = "110px";
     tile.style.fontSize = "22px";
     tile.style.margin = "-5px";
@@ -408,6 +429,21 @@ function DisplaySubstitute(x, y, num, finished)
         tile.style.margin = "";
         OnceListener(tile, finished);
     });
+}
+
+function DisplayOver()
+{
+    var gameOverMessage = document.getElementById("board-game-over-message");
+    gameOverMessage.style.display = "";
+    setTimeout(function() {
+        gameOverMessage.style.opacity = 1;
+        document.getElementById("board-tiles-container").style.opacity = 0.5;
+    }, 0);
+}
+
+function DisplayScore(score)
+{
+    document.getElementById("score-message").innerText = score;
 }
 
 
@@ -420,7 +456,7 @@ window.onload = function()
     var grid = new Grid(4);
     grid.AddRandom(turn);
     grid.AddRandom(turn);
-    turn.Trigger();
+    turn.Trigger(null, null, null, null);
     // console.log(grid);
 
     var animating = false, over = false;
@@ -435,12 +471,14 @@ window.onload = function()
             if (grid.Slide(map[e.key], turn))
             {
                 animating = true;
-                turn.Trigger(DisplayAfterMove, function() {
+                turn.Trigger(DisplayAfterMove, null, function() {
                     animating = false;
-                    console.log(StringG(grid));
+                    // console.log(StringG(grid));
+                }, function() {
                     if (grid.Over())
                     {
                         console.log("Game Over");
+                        DisplayOver();
                         over = true;
                     }
                 });
