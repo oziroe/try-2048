@@ -194,6 +194,7 @@ function Grid(size)
                 break;
             }
         }
+        return true;
     };
 
     // `direction`: 0 => up, 1 => right, 2 => down, 3 => left.
@@ -300,6 +301,9 @@ function Grid(size)
 
     this.Over = function()
     {
+        // Maybe this function can be impl like a seq of
+        // `xxx.map(...).filter(...).reduce(...)` things, but it would be nicer
+        // to write as C in C part.
         for (var x = 0; x < size; x++)
         {
             for (var y = 0; y < size; y++)
@@ -325,12 +329,14 @@ function Grid(size)
 // This is the base of a more complicated implementation of interfaces.
 function DisplayInitialize()
 {
+    // Create tiles container and insert to page.
     var container = document.createElement("div");
     container.id = "board-tiles-container";
     container.style.width = container.style.height = "450px";
     document.getElementById("board-container").appendChild(container);
-    document.getElementById("page-container").style.width = "452px";
 
+    // Other dynimical style settings.
+    document.getElementById("page-container").style.width = "452px";
     var gameOverMessage = document.getElementById("board-game-over-message");
     gameOverMessage.style.width = gameOverMessage.style.height =
         gameOverMessage.style.lineHeight = "450px";
@@ -359,10 +365,10 @@ function DisplayAdvent(x, y, number, finished)
     setTimeout(function() {
         tile.style.width = tile.style.height = "100px";
         tile.style.fontSize = "20px";
-        tile.style.margin = "";
+        tile.style.margin = "";  // It is heard that IE cannot take a null here.
     }, 0);
     OnceListener(tile, function() {
-        console.log("Advent finished.");
+        // console.log("Advent finished.");
         finished();
     });
     // console.log("Set advent transition listener.");
@@ -456,7 +462,7 @@ window.onload = function()
     var animating = false, over = false;
     window.addEventListener("keypress", function(e)
     {
-        // Disable key press during animation.
+        // Disable key press during animation or game is already over.
         if (animating || over)
             return;
         var map = {w: 0, d: 1, s: 2, a: 3};
