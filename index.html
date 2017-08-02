@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <!-- https://github.com/joshbuchea/HEAD#meta -->
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -130,8 +131,8 @@
           // calculated the new style of tiles container.
           setTimeout(function() {
               document.getElementById("header-title").style.width =
-                  (document.getElementById("board-tiles-container").clientWidth -
-                      document.getElementById("score-container").clientWidth - 10)
+                  (document.getElementById("board-tiles-container").clientWidth
+                  - document.getElementById("score-container").clientWidth - 10)
                   + "px";
           }, 0);
           // If the screen is thin, change title width.

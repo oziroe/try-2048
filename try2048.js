@@ -463,17 +463,34 @@ function DisplayShowEnd()
 // The main game loop and entry point.
 window.addEventListener("load", function()
 {
-    // Initialize the game.
-    DisplayInitialize();
     var turn = new Turn();
     var grid = new Grid(config.game.boardSize);
+    MainInitialize(grid, turn);
+    // console.log(grid);
+
+    MainListenActions(grid, turn);
+
+    document.getElementById("restart-button")
+            .addEventListener("click", function() {
+        // Go to hell
+        window.location.reload();
+    });
+});
+
+function MainInitialize(grid, turn)
+{
+    DisplayInitialize();
     grid.AddRandom(turn);
     grid.AddRandom(turn);
     turn.Trigger(null, null, null, null);
-    // console.log(grid);
+}
 
-    // Handle every action user makes.
+function MainListenActions(grid, turn)
+{
     var animating = false, over = false;
+    // I would like to extract this function to a argument passed into here.
+    // But it's a bit hard to handle with `over` and `animating`.
+    // So I just consider this part of code a component of `Main()`.
     function UserSlide(direction)
     {
         if (grid.Slide(direction, turn))
@@ -505,6 +522,7 @@ window.addEventListener("load", function()
         }
     });
     // Mobile client by swiping screen.
+    // https://stackoverflow.com/questions/2264072/detect-a-finger-swipe-through-javascript-on-the-iphone-and-android
     var startX = null, startY = null, startDuringAnimation = false;
     document.getElementById("board-tiles-container")
         .addEventListener("touchstart", function(event) {
@@ -526,8 +544,7 @@ window.addEventListener("load", function()
                 return;
             if (startDuringAnimation || (startX === null || startY === null))
             {
-                startX = null;
-                startY = null;
+                startX = startY = null;
                 startDuringAnimation = false;
                 return;
             }
@@ -539,31 +556,14 @@ window.addEventListener("load", function()
             if (Math.max(Math.abs(x), Math.abs(y)) > 5)
             {
                 if (Math.abs(x) > Math.abs(y))
-                {
-                    if (x > 0)
-                        UserSlide(1);
-                    else
-                        UserSlide(3);
-                }
+                    x > 0 ? UserSlide(1) : UserSlide(3);
                 else
-                {
-                    if (y > 0)
-                        UserSlide(2);
-                    else
-                        UserSlide(0);
-                }
+                    y > 0 ? UserSlide(2) : UserSlide(0);
             }
 
-            startX = null;
-            startY = null;
+            startX = startY = null;
         }, false);
-
-    document.getElementById("restart-button")
-            .addEventListener("click", function() {
-        // Go to hell
-        window.location.reload();
-    });
-});
+}
 
 
 // Utility Part.
