@@ -320,14 +320,17 @@ function DisplayInitialize()
     // Create tiles container and insert to page.
     var container = document.createElement("div");
     container.id = "board-tiles-container";
-    container.style.width = container.style.height = "450px";
+    var containerSize = config.game.boardSize *
+        (config.size.tile + config.size.tileMargin) + config.size.tileMargin;
+    container.style.width = container.style.height = containerSize + "px";
     document.getElementById("board-container").appendChild(container);
 
     // Other dynimical style settings.
-    document.getElementById("page-container").style.width = "452px";
+    document.getElementById("page-container").style.width =
+        (containerSize + 2) + "px";  // In case for border overflow.
     var gameOverMessage = document.getElementById("board-game-over-message");
     gameOverMessage.style.width = gameOverMessage.style.height =
-        gameOverMessage.style.lineHeight = "450px";
+        gameOverMessage.style.lineHeight = containerSize + "px";
 }
 
 // These three global var must be keeping, so I can track tiles during moving
@@ -460,15 +463,36 @@ function DisplayShowEnd()
 // The main game loop and entry point.
 window.addEventListener("load", function()
 {
+    // Initialize the game.
     DisplayInitialize();
     var turn = new Turn();
-    var grid = new Grid(4);
+    var grid = new Grid(config.game.boardSize);
     grid.AddRandom(turn);
     grid.AddRandom(turn);
     turn.Trigger(null, null, null, null);
     // console.log(grid);
 
+    // Handle every action user makes.
     var animating = false, over = false;
+    function UserSlide(direction)
+    {
+        if (grid.Slide(direction, turn))
+        {
+            animating = true;
+            turn.Trigger(DisplayAfterMove, null, function() {
+                animating = false;
+                // console.log(StringG(grid));
+            }, function() {
+                if (grid.Over())
+                {
+                    console.log("Game Over");
+                    DisplayOver();
+                    over = true;
+                }
+            });
+        }
+    }
+    // Desktop client by pressing keyboard.
     window.addEventListener("keypress", function(event) {
         // Disable key press during animation or game is already over.
         if (animating || over)
@@ -476,24 +500,63 @@ window.addEventListener("load", function()
         var map = {w: 0, d: 1, s: 2, a: 3};
         if (event.key in map)
         {
-            if (grid.Slide(map[event.key], turn))
-            {
-                animating = true;
-                turn.Trigger(DisplayAfterMove, null, function() {
-                    animating = false;
-                    // console.log(StringG(grid));
-                }, function() {
-                    if (grid.Over())
-                    {
-                        console.log("Game Over");
-                        DisplayOver();
-                        over = true;
-                    }
-                });
-            }
+            UserSlide(map[event.key]);
             // console.log(searchTable);
         }
     });
+    // Mobile client by swiping screen.
+    var startX = null, startY = null, startDuringAnimation = false;
+    document.getElementById("board-tiles-container")
+        .addEventListener("touchstart", function(event) {
+            if (over)
+                return;
+            if (animating)
+            {
+                startDuringAnimation = true;
+                return;
+            }
+
+            startX = event.touches[0].clientX;
+            startY = event.touches[0].clientY;
+            // console.log(StringP(startX, startY));
+        }, false);
+    document.getElementById("board-tiles-container")
+        .addEventListener("touchmove", function(event) {
+            if (over)
+                return;
+            if (startDuringAnimation || (startX === null || startY === null))
+            {
+                startX = null;
+                startY = null;
+                startDuringAnimation = false;
+                return;
+            }
+
+            var endX = event.touches[0].clientX,
+                endY = event.touches[0].clientY;
+            // console.log(StringP(endX, endY));
+            var x = endX - startX, y = endY - startY;
+            if (Math.max(Math.abs(x), Math.abs(y)) > 5)
+            {
+                if (Math.abs(x) > Math.abs(y))
+                {
+                    if (x > 0)
+                        UserSlide(1);
+                    else
+                        UserSlide(3);
+                }
+                else
+                {
+                    if (y > 0)
+                        UserSlide(2);
+                    else
+                        UserSlide(0);
+                }
+            }
+
+            startX = null;
+            startY = null;
+        }, false);
 
     document.getElementById("restart-button")
             .addEventListener("click", function() {

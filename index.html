@@ -2,13 +2,77 @@
 <html>
   <head>
     <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>Try2048</title>
-    <link rel="stylesheet" href="./style.css">
+    <style>
+      #page-container {
+          font-family: sans-serif;
+          margin: 0 auto;
+          position: relative;
+      }
+
+      #board-tiles-container {
+          position: relative;
+          border: 1px solid;
+          transition: opacity 0.5s, border-color 0.1s;
+      }
+
+      .board-tile {
+          position: absolute;
+          text-align: center;
+          border: 1px solid;
+      }
+
+      #board-game-over-message {
+          position: absolute;
+          text-align: center;
+          font-size: 50px;
+          opacity: 0;
+          transition: all 0.5s;
+      }
+
+      /* The style above the game board is fixed here.
+         If it don't play well on mobiles, then move them to scripts. */
+      #score-container {
+          position: absolute;
+          right: 0;
+          top: 0;
+          border: 1px solid;
+          text-align: center;
+          width: 100px;
+          height: 45px;
+          line-height: 1.4em;
+      }
+
+      #score-message {
+          font-size: 20px;
+      }
+
+      #restart-container {
+          position: absolute;
+          right: 0;
+          top: 57px;
+          text-align: center;
+          width: 100px;
+          border: 1px solid;
+      }
+
+      #restart-button {
+          width: 100%;
+          padding: 0;
+          height: 30px;
+          border: 0;
+          padding: 0;
+          background-color: white;
+          font-size: 15px;
+      }
+    </style>
   </head>
   <body>
     <div id="page-container">
-      <h1>Welcome to Try2048.</h1>
-      <h3>Join the numbers to reach 2048!</h3>
+      <h1 id="header-title">Welcome to Try2048.</h1>
+      <h3 id="header-desc">Join the numbers to reach 2048!</h3>
 
       <div id="score-container">
           Score <div id="score-message">0</div>
@@ -21,7 +85,58 @@
         <div id="board-game-over-message" style="display: none;">Game Over!</div>
       </div>
     </div>
-    <script src="./config.js"></script>    
+    <div id="goodbye-message" style="display: none;">
+        Your screen is not suitable for this page.
+        Please change its shape and refresh the page.
+    </div>
+    <script>
+      var config = {
+          size: {
+              tile: 100,  // This default value is modified below.
+              tileMargin: 10,
+              tileFont: 20,
+              tileZoom: 5,
+              tileFontZoom: 2,
+              pageMargin: 15,
+          },
+          trans: {
+              advent: 0.05,
+              move: 0.15,
+              substitute: 0.07,
+              timeout: 0.2,
+          },
+          game: {
+              boardSize: 4,
+          },
+      };
+
+      window.addEventListener("load", function() {
+          // Rejudge the size of tiles.
+          var width = window.innerWidth, height = window.innerHeight - 200;
+          var size = Math.min(width, height) - 2 - config.size.pageMargin * 2;
+          var tileSize = Math.floor(
+              (size - (config.game.boardSize + 1) * config.size.tileMargin) /
+              config.game.boardSize);
+          if (tileSize < 30)
+          {
+              // This device is ...
+              document.getElementById("page-container").style.display = "none";
+              document.getElementById("goodbye-message").style.display = "";
+              return;
+          }
+          config.size.tile = tileSize;
+
+          // Make sure that the following changes will be made after browser
+          // calculated the new style of tiles container.
+          setTimeout(function() {
+              document.getElementById("header-title").style.width =
+                  (document.getElementById("board-tiles-container").clientWidth -
+                      document.getElementById("score-container").clientWidth - 10)
+                  + "px";
+          }, 0);
+          // If the screen is thin, change title width.
+      });
+    </script>
     <script src="./try2048.js"></script>
   </body>
 </html>
