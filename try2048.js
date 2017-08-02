@@ -101,6 +101,10 @@ function Turn()
                         callQueue.pop()(function() {
                             // It is heard that in Javascript there's no data
                             // race. The following code need fix if I was wrong.
+                            // Think clearly, this should not be `<= 0`.
+                            // Or an accident double calling to one `finished`
+                            // may cause the `next` be called more than one
+                            // time, too.
                             if (--remain === 0)
                             {
                                 beforeNext && beforeNext();
@@ -533,8 +537,13 @@ function OnceListener(target, callback)
     var triggered = false;
     function CallbackWrapper()
     {
-        triggered = true;
-        callback();
+        // This may be later than time out protection.
+        // If so, then prevent to call it twice.
+        if (!triggered)
+        {
+            triggered = true;
+            callback();
+        }
     }
     target.addEventListener("transitionend", CallbackWrapper, {once: true});
     // console.log(target.ontransitionend);
@@ -545,7 +554,8 @@ function OnceListener(target, callback)
         {
             console.log("Time out! Force executing callback.");
             // console.log(target);
+            triggered = true;
             callback();
         }
-    }, 500);
+    }, config.trans.timeout * 1000);
 }
