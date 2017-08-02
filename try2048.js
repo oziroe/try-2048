@@ -81,59 +81,46 @@ function Turn()
         DisplayScore(self._score);
         DisplayShowStart();
 
-        function CommonPatternHere(callQueue, remain, beforeNext, next)
+        function CommonPatternHere(callQueue, remain, beforeNext)
         {
-            return function()
+            return function(next)
             {
-                if (callQueue.length === 0)
+                return function()
                 {
-                    beforeNext && beforeNext();
-                    next();
-                    return;
-                }
+                    if (callQueue.length === 0)
+                    {
+                        beforeNext && beforeNext();
+                        next();
+                        return;
+                    }
 
-                while (callQueue.length > 0)
-                {
-                    callQueue.pop()(function() {
-                        // It is heard that in Javascript there's no data race.
-                        // The following code need fix if I was wrong.
-                        // `decrease` will change count value and return its new
-                        // value. It must be wrapped to change the origin var.
-                        if (--remain === 0)
-                        {
-                            beforeNext && beforeNext();
-                            next();
-                        }
-                    });
-                }
+                    while (callQueue.length > 0)
+                    {
+                        // The following lambda would be sent as `finished` to
+                        // Interface Part.
+                        callQueue.pop()(function() {
+                            // It is heard that in Javascript there's no data
+                            // race. The following code need fix if I was wrong.
+                            if (--remain === 0)
+                            {
+                                beforeNext && beforeNext();
+                                next();
+                            }
+                        });
+                    }
+                };
             };
         };
-        // Unfortunately, because of the limitation of javascript, this wrapper
-        // can only used for a specific kind of function.
-        // If applying it to universal functions with varying number of
-        // arguments, supporting within that function is needed.
-        function CurryList()
-        {
-            this.list = [];
-            var self = this;
-            this.Call = function(callQueue, decrease, beforeNext)
-            {
-                self.list.push(function (after) {
-                    return CommonPatternHere(callQueue, decrease, beforeNext,
-                        after);
-                });
-                return self;
-            };
-        }
-        new CurryList()
-        .Call(self._actions.move,
-            self._remain.move, afterMove)
-        .Call(self._actions.substitute,
-            self._remain.substitute, afterSubstitute)
-        .Call(self._actions.advent,
-            self._remain.advent, afterAdvent)
-        .list.reduceRight(
-            function(after, previous) { return previous(after); },
+
+        [
+            CommonPatternHere(self._actions.move,
+                self._remain.move, afterMove),
+            CommonPatternHere(self._actions.substitute,
+                self._remain.substitute, afterSubstitute),
+            CommonPatternHere(self._actions.advent,
+                self._remain.advent, afterAdvent)
+        ].reduceRight(function(after, previous) { return previous(after); },
+            // Clean up code here.
             function() {
                 if (afterAll !== null)
                     afterAll();
@@ -152,7 +139,7 @@ function Turn()
 // A "slide" is the basic action player can do. The chess board object will also
 // be defined in this part. Actually, a slide will be deconstructed into actions
 // that all finish in one ture.
-function Grid(size, turn)
+function Grid(size)
 {
     this._grid = new Array(size);
     for (var i = 0; i < this._grid.length; i++)
@@ -163,7 +150,7 @@ function Grid(size, turn)
     }
     var self = this;
 
-    this.AddRandom = function()
+    this.AddRandom = function(turn)
     {
         var full = true;
         for (var x = 0; x < size; x++)
@@ -195,7 +182,7 @@ function Grid(size, turn)
     };
 
     // `direction`: 0 => up, 1 => right, 2 => down, 3 => left.
-    this.Slide = function(direction)
+    this.Slide = function(direction, turn)
     {
         // Slide `numbers` toward numbers[0].
         function SlideVector(numbers, move, merge)
@@ -349,19 +336,21 @@ function DisplayAdvent(x, y, number, finished)
     var tile = document.createElement("div");
     tile.innerText = number;
     tile.classList.add("board-tile");
-    tile.style.transition = "all 0.05s";
+    tile.style.transition = "all " + config.trans.advent + "s";
     tile.style.width = tile.style.height = 0;
-    tile.style.lineHeight = "100px";
+    tile.style.lineHeight = config.size.tile + "px";
     tile.style.fontSize = 0;
-    tile.style.margin = "50px";
-    tile.style.top  = (y * 110 + 10) + "px";
-    tile.style.left = (x * 110 + 10) + "px";
+    tile.style.margin = (config.size.tile / 2) + "px";
+    tile.style.top  =
+        (y * config.size.tile + (y + 1) * config.size.tileMargin) + "px";
+    tile.style.left =
+        (x * config.size.tile + (x + 1) * config.size.tileMargin) + "px";
     document.getElementById("board-tiles-container").appendChild(tile);
     searchTable[StringP(x, y)] = tile;
 
     setTimeout(function() {
-        tile.style.width = tile.style.height = "100px";
-        tile.style.fontSize = "20px";
+        tile.style.width = tile.style.height = config.size.tile + "px";
+        tile.style.fontSize = config.size.tileFont + "px";
         tile.style.margin = "";  // It is heard that IE cannot take a null here.
     }, 0);
     OnceListener(tile, function() {
@@ -374,9 +363,11 @@ function DisplayAdvent(x, y, number, finished)
 function DisplayMove(x, y, newX, newY, finished)
 {
     var tile = searchTable[StringP(x, y)];
-    tile.style.transition = "all 0.15s";
-    tile.style.top  = (newY * 110 + 10) + "px";
-    tile.style.left = (newX * 110 + 10) + "px";
+    tile.style.transition = "all " + config.trans.move + "s";
+    tile.style.top  =
+        (newY * config.size.tile + (newY + 1) * config.size.tileMargin) + "px";
+    tile.style.left =
+        (newX * config.size.tile + (newX + 1) * config.size.tileMargin) + "px";
     // There's no need to worry about overriding.
     // Any override tile will be override again by substitution.
     // So any of them survives will be okay.
@@ -416,19 +407,24 @@ function DisplaySubstitute(x, y, num, finished)
 {
     var tile = searchTable[StringP(x, y)];
     tile.innerText = num;
-    tile.style.transition = "all 0.07s";
-    tile.style.width = tile.style.height = tile.style.lineHeight = "110px";
-    tile.style.fontSize = "22px";
-    tile.style.margin = "-5px";
+    tile.style.transition = "all " + config.trans.substitution + "s";
+    tile.style.width = tile.style.height = tile.style.lineHeight =
+        (config.size.tile + config.size.tileZoom * 2) + "px";
+    tile.style.fontSize =
+        config.size.tileFont + config.size.tileFontZoom + "px";
+    tile.style.margin = -config.size.tileZoom + "px";
     // Don't know why but seems IE11 always time out on this trigger.
     OnceListener(tile, function() {
-        tile.style.width = tile.style.height = tile.style.lineHeight = "100px";
-        tile.style.fontSize = "20px";
+        tile.style.width = tile.style.height = tile.style.lineHeight =
+            config.size.tile + "px";
+        tile.style.fontSize = config.size.tileFont + "px";
         tile.style.margin = "";
         OnceListener(tile, finished);
     });
 }
 
+// NOTICE: The game over effect is not set here.
+// Go to `style.css` instead.
 function DisplayOver()
 {
     var gameOverMessage = document.getElementById("board-game-over-message");
@@ -444,6 +440,7 @@ function DisplayScore(score)
     document.getElementById("score-message").innerText = score;
 }
 
+// These two are only for fun.
 function DisplayShowStart()
 {
     document.getElementById("board-tiles-container").style.borderColor = "grey";
@@ -457,25 +454,25 @@ function DisplayShowEnd()
 
 // Main Part.
 // The main game loop and entry point.
-window.onload = function()
+window.addEventListener("load", function()
 {
     DisplayInitialize();
     var turn = new Turn();
-    var grid = new Grid(4, turn);
-    grid.AddRandom();
-    grid.AddRandom();
+    var grid = new Grid(4);
+    grid.AddRandom(turn);
+    grid.AddRandom(turn);
     turn.Trigger(null, null, null, null);
     // console.log(grid);
 
     var animating = false, over = false;
-    window.addEventListener("keypress", function(e) {
+    window.addEventListener("keypress", function(event) {
         // Disable key press during animation or game is already over.
         if (animating || over)
             return;
         var map = {w: 0, d: 1, s: 2, a: 3};
-        if (e.key in map)
+        if (event.key in map)
         {
-            if (grid.Slide(map[e.key]))
+            if (grid.Slide(map[event.key], turn))
             {
                 animating = true;
                 turn.Trigger(DisplayAfterMove, null, function() {
@@ -499,7 +496,7 @@ window.onload = function()
         // Go to hell
         window.location.reload();
     });
-}
+});
 
 
 // Utility Part.
@@ -547,7 +544,7 @@ function OnceListener(target, callback)
         if (!triggered)
         {
             console.log("Time out! Force executing callback.");
-            console.log(target);
+            // console.log(target);
             callback();
         }
     }, 500);
