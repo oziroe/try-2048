@@ -118,9 +118,11 @@
           var tileSize = Math.floor(
               (size - (config.game.boardSize + 1) * config.size.tileMargin) /
               config.game.boardSize);
-          if (tileSize < 30)
+          // Actually, the threshold should be `Welcome to` on the same line
+          // in my title, but this condition might work similar.
+          if (tileSize < 40)
           {
-              // This device is ...
+              // This device is too... strange.
               document.getElementById("page-container").style.display = "none";
               document.getElementById("goodbye-message").style.display = "";
               return;
@@ -130,12 +132,12 @@
           // Make sure that the following changes will be made after browser
           // calculated the new style of tiles container.
           setTimeout(function() {
+              // If the screen is thin, change title width.
               document.getElementById("header-title").style.width =
                   (document.getElementById("board-tiles-container").clientWidth
                   - document.getElementById("score-container").clientWidth - 10)
                   + "px";
           }, 0);
-          // If the screen is thin, change title width.
       });
     </script>
     <script src="./try2048.js"></script>

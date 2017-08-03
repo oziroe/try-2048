@@ -1,8 +1,10 @@
 /*
  * try2048.js
  * An implementation of game "2048" with a robot player.
+ * The robot is not included in this file.
  *
  * Restarted by oziroe on July 31, 2017.
+ * Last modified by oziroe on Aug 3, 2017.
  */
 
 // Interface Part.
@@ -320,6 +322,8 @@ function DisplayInitialize()
     // Create tiles container and insert to page.
     var container = document.createElement("div");
     container.id = "board-tiles-container";
+    // It would be painful to extract constants to arguments, so just keep them
+    // inline rather than the way in `Grid`.
     var containerSize = config.game.boardSize *
         (config.size.tile + config.size.tileMargin) + config.size.tileMargin;
     container.style.width = container.style.height = containerSize + "px";
@@ -459,111 +463,83 @@ function DisplayShowEnd()
 }
 
 
+// Game Logic Part.
+// It is seemed that Main Part below has too much work to do.
+// This part will avoid any input by user before a turn is over.
+//
+// Upon this level of abstraction, no more `Turn` and `Grid` exist, all
+// application needs to do is registry several functions that would fire hook
+// function provided here properly, along with functions that are able to
+// disable previous ones temp...ly.
+//
+// The importance of this part is that it would provide a general interface not
+// noly for page event, but also robot plyer.
+function Game()
+{
+    this._turn = new Turn();
+    this._grid = new Grid(config.game.boardSize);
+    var self = this;
+
+    // User action handler called by event listeners.
+    // `pause()` make sure that no more calling on this callback until `resume`
+    // is called. For event listeners, these are neccessary, but for robot,
+    // maybe it just needs to put itself into `resume`.
+    this.Action = function(direction, pause, resume)
+    {
+        // Only pause when the sliding is not trivial. Otherwise, this callback
+        // returns just like nothing happened.
+        if (self._grid.Slide(direction, self._turn))
+        {
+            pause();
+            // Previously, resuming would be right after adventing animation.
+            // But it seems no sense to recover user action if the game is over,
+            // so I move it to `afterAll` hook.
+            // Also, there would be no `resume` calling if the game is dead.
+            // So status var `over` is no more needed.
+            self._turn.Trigger(DisplayAfterMove, null, null, function() {
+                if (self._grid.Over())
+                {
+                    console.log("Game Over.");
+                    DisplayOver();
+                }
+                else
+                    resume();
+            })
+        }
+    };
+
+    this.Initialize = function()
+    {
+        DisplayInitialize();
+    };
+
+    this.Start = function()
+    {
+        self._grid.AddRandom(self._turn);
+        self._grid.AddRandom(self._turn);
+        self._turn.Trigger(null, null, null, null);
+    };
+}
+
+
 // Main Part.
 // The main game loop and entry point.
 window.addEventListener("load", function()
 {
-    var turn = new Turn();
-    var grid = new Grid(config.game.boardSize);
-    MainInitialize(grid, turn);
-    // console.log(grid);
+    var game = new Game();
+    game.Initialize();
 
-    MainListenActions(grid, turn);
+    ListenKeyPress(game.Action);
+    ListenTouchMove(game.Action);
 
     document.getElementById("restart-button")
             .addEventListener("click", function() {
-        // Go to hell
+        // Go to hell.
         window.location.reload();
     });
+
+    game.Start();
 });
-
-function MainInitialize(grid, turn)
-{
-    DisplayInitialize();
-    grid.AddRandom(turn);
-    grid.AddRandom(turn);
-    turn.Trigger(null, null, null, null);
-}
-
-function MainListenActions(grid, turn)
-{
-    var animating = false, over = false;
-    // I would like to extract this function to a argument passed into here.
-    // But it's a bit hard to handle with `over` and `animating`.
-    // So I just consider this part of code a component of `Main()`.
-    function UserSlide(direction)
-    {
-        if (grid.Slide(direction, turn))
-        {
-            animating = true;
-            turn.Trigger(DisplayAfterMove, null, function() {
-                animating = false;
-                // console.log(StringG(grid));
-            }, function() {
-                if (grid.Over())
-                {
-                    console.log("Game Over");
-                    DisplayOver();
-                    over = true;
-                }
-            });
-        }
-    }
-    // Desktop client by pressing keyboard.
-    window.addEventListener("keypress", function(event) {
-        // Disable key press during animation or game is already over.
-        if (animating || over)
-            return;
-        var map = {w: 0, d: 1, s: 2, a: 3};
-        if (event.key in map)
-        {
-            UserSlide(map[event.key]);
-            // console.log(searchTable);
-        }
-    });
-    // Mobile client by swiping screen.
-    // https://stackoverflow.com/questions/2264072/detect-a-finger-swipe-through-javascript-on-the-iphone-and-android
-    var startX = null, startY = null, startDuringAnimation = false;
-    document.getElementById("board-tiles-container")
-        .addEventListener("touchstart", function(event) {
-            if (over)
-                return;
-            if (animating)
-            {
-                startDuringAnimation = true;
-                return;
-            }
-
-            startX = event.touches[0].clientX;
-            startY = event.touches[0].clientY;
-            // console.log(StringP(startX, startY));
-        }, false);
-    document.getElementById("board-tiles-container")
-        .addEventListener("touchmove", function(event) {
-            if (over)
-                return;
-            if (startDuringAnimation || (startX === null || startY === null))
-            {
-                startX = startY = null;
-                startDuringAnimation = false;
-                return;
-            }
-
-            var endX = event.touches[0].clientX,
-                endY = event.touches[0].clientY;
-            // console.log(StringP(endX, endY));
-            var x = endX - startX, y = endY - startY;
-            if (Math.max(Math.abs(x), Math.abs(y)) > 5)
-            {
-                if (Math.abs(x) > Math.abs(y))
-                    x > 0 ? UserSlide(1) : UserSlide(3);
-                else
-                    y > 0 ? UserSlide(2) : UserSlide(0);
-            }
-
-            startX = startY = null;
-        }, false);
-}
 
 
 // Utility Part.
@@ -621,4 +597,63 @@ function OnceListener(target, callback)
             callback();
         }
     }, config.trans.timeout * 1000);
+}
+
+function ListenKeyPress(action)
+{
+    window.addEventListener("keypress", function(event) {
+        var map = {w: 0, d: 1, s: 2, a: 3};
+        var stopped = false;
+        if (event.key in map && !stopped)
+        {
+            action(map[event.key],
+                function() { stopped = true; },
+                function() { stopped = false; });
+            // console.log(searchTable);
+        }
+    });
+}
+
+function ListenTouchMove(action)
+{
+    // https://stackoverflow.com/questions/2264072/detect-a-finger-swipe-through-javascript-on-the-iphone-and-android
+    var startX = null, startY = null, stopped = false;
+    document.getElementById("board-tiles-container")
+        .addEventListener("touchstart", function(event) {
+            if (stopped)
+            {
+                startX = startY = null;
+                return;
+            }
+
+            startX = event.touches[0].clientX;
+            startY = event.touches[0].clientY;
+            // console.log(StringP(startX, startY));
+        }, false);
+    document.getElementById("board-tiles-container")
+        .addEventListener("touchmove", function(event) {
+            if (startX === null || startY === null)
+            {
+                startX = startY = null;
+                return;
+            }
+
+            var endX = event.touches[0].clientX,
+                endY = event.touches[0].clientY;
+            // console.log(StringP(endX, endY));
+            var x = endX - startX, y = endY - startY;
+            var direction;
+            if (Math.max(Math.abs(x), Math.abs(y)) > 5)
+            {
+                if (Math.abs(x) > Math.abs(y))
+                    direction = x > 0 ? 1 : 3;
+                else
+                    direction = y > 0 ? 2 : 0;
+            }
+            startX = startY = null;
+
+            action(direction,
+                function() { stopped = true; },
+                function() { stopped = false; });
+        }, false);
 }
